@@ -22,16 +22,16 @@
 </head>
 <body>
     <button id="csatBtn" onclick="kapcsolodas()" style="width:100%; height:50px; margin-bottom:20px;">BLUETOOTH KAPCSOLAT</button>
-
+    
     <div id="vezerlok" style="display:none;">
         <div class="gomb-grid">
             <button class="btn-blue" onclick="kuldes('b6')">Forró víz</button>
             <button class="btn-green" onclick="kuldes('b5')">Őrölt kávé</button>
             <button class="btn-yellov" onclick="kuldes('b4')">Cappuccino</button>
-            <button class="btn-orange" onclick="kuldes('b3')">Hosszú kávé</button>
+            <button class="btn-orange" onclick="kuldes('b3')">hosszú kávé</button>
             <button class="btn-red" onclick="kuldes('b2')">Közepes kávé</button>
-            <button class="btn-maroon" onclick="kuldes('b1')">Presszó kávé</button>
-            <button class="btn-pink" onclick="kuldes('b7')">Menü</button>
+            <button class="btn-maroon" onclick="kuldes('b1')">presszó kávé</button>
+            <button class="btn-pink" onclick="kuldes('b7')">menü</button>
         </div>
 
         <div class="admin-section">
@@ -46,85 +46,68 @@
     <script>
         let writeChar;
         let notifyChar;
-
         const S_UUID = "12345678-1234-1234-1234-1234567890ab";
         const C_RX   = "12345678-1234-1234-1234-1234567890ac";
         const C_TX   = "12345678-1234-1234-1234-1234567890ad";
 
         async function kapcsolodas() {
             try {
-
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ name: 'KaveGep_BLE' }],
                     optionalServices: [S_UUID]
                 });
-
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(S_UUID);
-
                 writeChar = await service.getCharacteristic(C_RX);
                 notifyChar = await service.getCharacteristic(C_TX);
-
                 await notifyChar.startNotifications();
-
                 notifyChar.addEventListener('characteristicvaluechanged', (event) => {
-
                     const data = new TextDecoder().decode(event.target.value);
-
                     if (data.startsWith("CREDIT_IS:")) {
                         document.getElementById('kreditEredmeny').value = data.split(":")[1];
                     }
                 });
-
                 document.getElementById('csatBtn').style.display = 'none';
                 document.getElementById('vezerlok').style.display = 'block';
+				const now = new Date();
 
-                // AUTOMATIKUS IDŐSZINKRON
-                const most = new Date();
+				const ev = now.getFullYear();
 
-                const ev = most.getFullYear();
-                const honap = String(most.getMonth() + 1).padStart(2, '0');
-                const nap = String(most.getDate()).padStart(2, '0');
+				const honap =
+					String(now.getMonth() + 1).padStart(2, '0');
 
-                const ora = String(most.getHours()).padStart(2, '0');
-                const perc = String(most.getMinutes()).padStart(2, '0');
-                const mp = String(most.getSeconds()).padStart(2, '0');
+				const nap =
+				String(now.getDate()).padStart(2, '0');
 
-                const idoParancs =
-                    SET_TIME:${ev}-${honap}-${nap} ${ora}:${perc}:${mp};
+				const ora =
+				String(now.getHours()).padStart(2, '0');
 
-                await kuldes(idoParancs);
+				const perc =
+					String(now.getMinutes()).padStart(2, '0');
 
-                console.log("Idő szinkron elküldve:", idoParancs);
+				const mp =
+					String(now.getSeconds()).padStart(2, '0');
 
-            } catch (e) {
-                alert("Hiba: " + e);
-            }
+					const idoString =
+				`${ev}-${honap}-${nap} ${ora}:${perc}:${mp}`;
+
+				await kuldes('SET_TIME:' + idoString);
+            } catch (e) { alert("Hiba: " + e); }
         }
 
-        async function kuldes(cmd) {
-
-            if(writeChar)
-                await writeChar.writeValue(new TextEncoder().encode(cmd));
-        }
-
+        async function kuldes(cmd) { if(writeChar) await writeChar.writeValue(new TextEncoder().encode(cmd)); }
+        
         async function lekerdezes() {
-
             const s = document.getElementById('sorszamInput').value;
-
-            if(s)
-                await kuldes('GET_CREDIT:' + s);
+            if(s) await kuldes('GET_CREDIT:' + s);
         }
 
         async function kreditMentese() {
-
             const s = document.getElementById('sorszamInput').value;
             const k = document.getElementById('kreditInput').value;
-
             if (s && k) {
-
                 await kuldes('SET_CREDIT:' + s + ':' + k);
-
+                // Itt törlődnek ki a mezők küldés után:
                 document.getElementById('sorszamInput').value = '';
                 document.getElementById('kreditInput').value = '';
                 document.getElementById('kreditEredmeny').value = '';
